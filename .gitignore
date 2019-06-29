@@ -1,2 +1,6 @@
 REALComp.egg-info
 *__pycache__
+*controller-memory.db
+.idea
+venv
+*.iml
