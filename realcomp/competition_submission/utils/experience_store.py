@@ -1,9 +1,11 @@
 import os
 import sqlite3
+import zlib
+
 import numpy as np
 import io
 
-from competition_submission.my_controller import JOINT_POSITIONS, TOUCH_SENSORS, RETINA, GOAL
+from competition_submission.consts import JOINT_POSITIONS, TOUCH_SENSORS, RETINA, GOAL
 
 CREATE_TABLE = """ CREATE TABLE IF NOT EXISTS past_experiences (
                                         id integer PRIMARY KEY,
@@ -38,25 +40,18 @@ REPLACE_ROW_IN_TABLE = "replace into past_experiences (%s,%s,%s,%s,%s,%s,%s,%s,%
     GOAL
 )
 
-compressor = 'zlib'  # zlib, bz2
-
 
 def adapt_array(arr):
-    """
-    http://stackoverflow.com/a/31312102/190597 (SoulNibbler)
-    """
-    # zlib uses similar disk size that Matlab v5 .mat files
-    # bz2 compress 4 times zlib, but storing process is 20 times slower.
     out = io.BytesIO()
     np.save(out, arr)
     out.seek(0)
-    return sqlite3.Binary(out.read().encode(compressor))  # zlib, bz2
+    return sqlite3.Binary(zlib.compress(out.read()))
 
 
 def convert_array(text):
     out = io.BytesIO(text)
     out.seek(0)
-    out = io.BytesIO(out.read().decode(compressor))
+    out = io.BytesIO(zlib.decompress(out.read()))
     return np.load(out)
 
 
@@ -79,12 +74,14 @@ class ExperienceStore:
                             (
                                 self.observation_number % self.memory_size,
                                 self.observation_number,
-                                previous_observation[JOINT_POSITIONS],
-                                previous_observation[TOUCH_SENSORS],
-                                previous_observation[RETINA],
-                                action,
-                                current_observation[JOINT_POSITIONS],
-                                current_observation[TOUCH_SENSORS],
-                                current_observation[RETINA],
+                                np.asarray(previous_observation[JOINT_POSITIONS]),
+                                np.asarray(previous_observation[TOUCH_SENSORS]),
+                                np.asarray(previous_observation[RETINA]),
+                                np.asarray(action),
+                                np.asarray(current_observation[JOINT_POSITIONS]),
+                                np.asarray(current_observation[TOUCH_SENSORS]),
+                                np.asarray(current_observation[RETINA]),
                                 goal
                             ))
+        self.conn.commit()
+        self.observation_number += 1

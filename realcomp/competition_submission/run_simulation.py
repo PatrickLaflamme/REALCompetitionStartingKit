@@ -14,6 +14,7 @@ from my_controller import MyController
 
 Controller = MyController
 
+
 def demo_run(extrinsic_trials=10):
 
     env = gym.make('REALComp-v0')
@@ -21,14 +22,14 @@ def demo_run(extrinsic_trials=10):
     
     env.intrinsic_timesteps = 10*1000*1000 # 10 million timesteps
     env.extrinsic_timesteps = 1000
-    env = wrappers.Monitor(env, "/home/patrick/projects/video", force=True)
+    # env = wrappers.Monitor(env, "/home/patrick/projects/video", force=True)
     # render simulation on screen
     # env.render('human')
     
     # reset simulation
     observation = env.reset()  
     reward = 0 
-    done = True
+    done = False
 
     # intrinsic phase
     print("Starting intrinsic phase...")
