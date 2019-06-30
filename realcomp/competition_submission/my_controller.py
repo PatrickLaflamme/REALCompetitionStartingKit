@@ -22,7 +22,7 @@ class ControllerWrapper:
         self.previous_state = None
         self.goal = None
         self.steps_on_current_goal = 0
-        self.steps_per_goal = 1000
+        self.steps_per_goal = 10
         self.experience_store = None
         self.experience_store_initialized = False
 
@@ -40,6 +40,7 @@ class ControllerWrapper:
             self._save_memory(observation, True)
             return self._choose_action(observation, reward, done)
         self._save_memory(observation, False)
+        self.steps_on_current_goal += 1
         return self._perform_training_step(observation, reward, done)
 
     def _save_memory(self, observation, is_testing_step):
@@ -98,7 +99,7 @@ class ControllerWrapper:
         :param: ndarray - the goal retinal image passed in on the observation object.
         :return:  boolean - Whether or not the step is a testing step
         """
-        return np.max(goal) == 0 and np.min(goal) == 0
+        return np.max(goal) != 0 and np.min(goal) != 0
 
     def _initialize_experience_store(self):
         """

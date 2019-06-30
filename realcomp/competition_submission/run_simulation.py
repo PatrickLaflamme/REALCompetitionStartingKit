@@ -24,7 +24,7 @@ def demo_run(extrinsic_trials=10):
     env.extrinsic_timesteps = 1000
     # env = wrappers.Monitor(env, "/home/patrick/projects/video", force=True)
     # render simulation on screen
-    env.render('human')
+    # env.render('human')
     
     # reset simulation
     observation = env.reset()  
