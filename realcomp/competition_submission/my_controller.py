@@ -1,8 +1,9 @@
-import numpy as np
-import os
+import time
 
-from competition_submission.consts import GOAL, RETINA, DB_FILE, MAX_MEMORY_SIZE, GOAL_THRESHOLD
-from competition_submission.utils.experience_store import ExperienceStore
+import numpy as np
+
+from competition_submission.consts import GOAL, RETINA, MAX_MEMORY_SIZE, GOAL_THRESHOLD, BATCH_SIZE, MAX_STEPS_PER_GOAL
+from competition_submission.utils.experience_store import ExperienceStore, Goal
 from competition_submission.utils.helper_functions import mse
 
 
@@ -22,9 +23,10 @@ class ControllerWrapper:
         self.previous_state = None
         self.goal = None
         self.steps_on_current_goal = 0
-        self.steps_per_goal = 10
+        self.steps_per_goal = MAX_STEPS_PER_GOAL
         self.experience_store = None
         self.experience_store_initialized = False
+        self.time = time.time()
 
     def step(self, observation, reward, done):
         """
@@ -56,11 +58,13 @@ class ControllerWrapper:
                                                      self.goal,
                                                      self.action)
         if is_testing_step:
-            self.goal = observation[GOAL]
+            self.goal = Goal(observation[GOAL], None, None)
         elif self.goal is None:
-            self.goal = observation[RETINA]
-        elif self.steps_on_current_goal >= self.steps_per_goal or self._state_is_close_to_goal(observation):
+            self.goal = Goal(observation[RETINA], None, None)
+        elif self.steps_on_current_goal > 1 and \
+                (self.steps_on_current_goal >= self.steps_per_goal or self._state_is_close_to_goal(observation)):
             self.goal = self.experience_store.select_new_goal()
+            self.steps_on_current_goal = 0
 
     def _state_is_close_to_goal(self, observation):
         """
@@ -68,7 +72,7 @@ class ControllerWrapper:
         :param observation: observation object returned by env.set(action)
         :return: None
         """
-        return mse(self.goal, observation[RETINA]) < GOAL_THRESHOLD
+        return mse(self.goal.retina, observation[RETINA]) < GOAL_THRESHOLD
 
     def _choose_action(self, observation, reward, done):
         """
@@ -78,6 +82,7 @@ class ControllerWrapper:
         :param done: done object returned by env.set(action)
         :return: list describing the action to perform
         """
+        # TODO: build the Deep Q agent and replace the below random movement
         proposed_action = self.action + 0.1*np.pi*np.random.randn(self.action_space.shape[0])
         self.action = np.maximum(np.minimum(proposed_action, self.action_space.high), self.action_space.low)
         self.previous_state = observation
@@ -91,6 +96,11 @@ class ControllerWrapper:
         :param done: done object returned by env.set(action)
         :return: list describing the action to perform
         """
+        if self.experience_store_initialized and self.experience_store.observation_number > 0:
+            print(time.time() - self.time)
+            self.time = time.time()
+            batch_data = self.experience_store.get_memory_replay_batch(BATCH_SIZE)
+            # TODO: build the Deep Q agent
         action = self._choose_action(observation, reward, done)
         return action
 
@@ -105,7 +115,7 @@ class ControllerWrapper:
         """
         initializes the database where the memories will be stored for memory replay
         """
-        self.experience_store = ExperienceStore(DB_FILE, MAX_MEMORY_SIZE)
+        self.experience_store = ExperienceStore(MAX_MEMORY_SIZE)
         self.experience_store_initialized = True
 
 

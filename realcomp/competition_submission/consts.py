@@ -1,11 +1,10 @@
-import os
-
-DB_FILE = "file::memory:?cache=shared"
-
 JOINT_POSITIONS = "joint_positions"
 TOUCH_SENSORS = "touch_sensors"
 RETINA = "retina"
 GOAL = "goal"
 
+MAX_STEPS_PER_GOAL = 1000
 GOAL_THRESHOLD = 0.1
 MAX_MEMORY_SIZE = 10000
+
+BATCH_SIZE = 128
